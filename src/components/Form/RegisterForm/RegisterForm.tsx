@@ -18,6 +18,10 @@ import { FcGoogle } from "react-icons/fc";
 import { IoEyeOffOutline } from "react-icons/io5";
 import { IoEyeOutline } from "react-icons/io5";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import SuccessModal from "@/components/Modal/SuccessModal/SuccessModal";
+import ErrorModal from "@/components/Modal/ErrorModal/ErrorModal";
 
 const formSchema = z
   .object({
@@ -48,6 +52,10 @@ export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] =
     useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<boolean>(false);
+  const [success, setSuccess] = useState<boolean>(false);
+  const { push } = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,8 +66,31 @@ export default function RegisterForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setLoading(true);
+
+    const res = await fetch("./api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: values.email,
+        password: values.password,
+      }),
+    });
+
+    if (res.ok) {
+      form.reset();
+      setLoading(false);
+      setSuccess(true);
+      setTimeout(() => {
+        push("/login");
+      }, 5000);
+    } else {
+      setLoading(false);
+      setError(true);
+    }
   }
 
   return (
@@ -124,17 +155,14 @@ export default function RegisterForm() {
                       className="focus:ring-2 focus:ring-primary focus:outline-none"
                       {...field}
                     />
-                    <div>
+                    <div
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
                       {showPassword ? (
-                        <IoEyeOutline
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl opacity-70 cursor-pointer"
-                          onClick={() => setShowPassword(false)}
-                        />
+                        <IoEyeOutline className="text-2xl opacity-75" />
                       ) : (
-                        <IoEyeOffOutline
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl opacity-70 cursor-pointer"
-                          onClick={() => setShowPassword(true)}
-                        />
+                        <IoEyeOffOutline className="text-2xl opacity-75" />
                       )}
                     </div>
                   </div>
@@ -159,17 +187,16 @@ export default function RegisterForm() {
                       className="focus:ring-2 focus:ring-primary focus:outline-none"
                       {...field}
                     />
-                    <div>
+                    <div
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                    >
                       {showConfirmPassword ? (
-                        <IoEyeOutline
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl opacity-70 cursor-pointer"
-                          onClick={() => setShowConfirmPassword(false)}
-                        />
+                        <IoEyeOutline className="text-2xl opacity-75" />
                       ) : (
-                        <IoEyeOffOutline
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl opacity-70 cursor-pointer"
-                          onClick={() => setShowConfirmPassword(true)}
-                        />
+                        <IoEyeOffOutline className="text-2xl opacity-75" />
                       )}
                     </div>
                   </div>
@@ -178,21 +205,37 @@ export default function RegisterForm() {
               </FormItem>
             )}
           />
-          <Button
-            type="submit"
-            className="w-full text-white font-semibold bg-primary hover:bg-primary-hover"
-          >
-            Daftar
-          </Button>
+          {loading ? (
+            <Button
+              disabled
+              className="w-full text-white font-semibold bg-primary opacity-75"
+            >
+              <Loader2 className="animate-spin" />
+              Tunggu sebentar
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              className="w-full text-white font-semibold bg-primary hover:bg-primary-hover"
+            >
+              Daftar
+            </Button>
+          )}
         </form>
       </Form>
 
       <div className="text-center text-sm">
         Sudah punya akun?{" "}
-        <Link href="/login" className="text-blue-600">
+        <Link href="/login" className="text-primary hover:underline">
           Masuk
         </Link>
       </div>
+
+      {/* Success Modal */}
+      <SuccessModal open={success} onClose={() => setSuccess(false)} />
+
+      {/* Error Modal */}
+      <ErrorModal open={error} onClose={() => setError(false)} />
     </div>
   );
 }
