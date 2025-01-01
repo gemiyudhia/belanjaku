@@ -211,7 +211,7 @@ export default function RegisterForm() {
               className="w-full text-white font-semibold bg-primary opacity-75"
             >
               <Loader2 className="animate-spin" />
-              Tunggu sebentar
+              Tunggu
             </Button>
           ) : (
             <Button
@@ -232,10 +232,23 @@ export default function RegisterForm() {
       </div>
 
       {/* Success Modal */}
-      <SuccessModal open={success} onClose={() => setSuccess(false)} />
+      <SuccessModal
+        open={success}
+        onClose={() => setSuccess(false)}
+        modalText="Pendaftaran Berhasil"
+        modalTitle="Akun Anda berhasil dibuat. Silakan cek email anda untuk verifikasi"
+        buttonText="Login Sekarang"
+      />
 
       {/* Error Modal */}
-      <ErrorModal open={error} onClose={() => setError(false)} />
+      <ErrorModal
+        open={error}
+        onClose={() => setError(false)}
+        modalTitle="Pendaftaran Gagal"
+        modalText="Mohon maaf, terjadi kesalahan saat proses pendaftaran atau akun anda
+            sudah terdaftar."
+        buttonText="Tutup"
+      />
     </div>
   );
 }

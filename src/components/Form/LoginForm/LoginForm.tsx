@@ -18,6 +18,11 @@ import { FcGoogle } from "react-icons/fc";
 import { IoEyeOffOutline } from "react-icons/io5";
 import { IoEyeOutline } from "react-icons/io5";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import SuccessModal from "@/components/Modal/SuccessModal/SuccessModal";
+import ErrorModal from "@/components/Modal/ErrorModal/ErrorModal";
+import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().min(5, "Email tidak valid.").max(50),
@@ -33,6 +38,10 @@ const formSchema = z.object({
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<boolean>(false);
+  const [emailVerified, setEmailVerifies] = useState<boolean>(false);
+  const { push } = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -42,8 +51,30 @@ export default function LoginForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setLoading(true);
+
+    try {
+      const res = await signIn("credentials", {
+        redirect: false,
+        email: values.email,
+        password: values.password,
+      });
+
+      if (res?.ok) {
+        form.reset();
+        setLoading(false);
+        setEmailVerifies(true);
+        setTimeout(() => {
+          push("/");
+        }, 4000);
+      } else {
+        setLoading(false);
+        setError(true);
+      }
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   return (
@@ -51,7 +82,8 @@ export default function LoginForm() {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Masuk</h1>
         <p className="text-sm text-muted-foreground">
-          Selamat datang di <span className="text-primary font-semibold italic">BelanjaKu</span>
+          Selamat datang di{" "}
+          <span className="text-primary font-semibold italic">BelanjaKu</span>
         </p>
       </div>
 
@@ -107,17 +139,14 @@ export default function LoginForm() {
                       className="focus:ring-2 focus:ring-primary focus:outline-none"
                       {...field}
                     />
-                    <div>
+                    <div
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
                       {showPassword ? (
-                        <IoEyeOutline
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl opacity-70 cursor-pointer"
-                          onClick={() => setShowPassword(false)}
-                        />
+                        <IoEyeOutline className="text-2xl opacity-75" />
                       ) : (
-                        <IoEyeOffOutline
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl opacity-70 cursor-pointer"
-                          onClick={() => setShowPassword(true)}
-                        />
+                        <IoEyeOffOutline className="text-2xl opacity-75" />
                       )}
                     </div>
                   </div>
@@ -126,12 +155,22 @@ export default function LoginForm() {
               </FormItem>
             )}
           />
-          <Button
-            type="submit"
-            className="w-full text-white font-semibold bg-primary hover:bg-primary-hover"
-          >
-            Masuk
-          </Button>
+          {loading ? (
+            <Button
+              disabled
+              className="w-full text-white font-semibold bg-primary opacity-75"
+            >
+              <Loader2 className="animate-spin" />
+              Tunggu
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              className="w-full text-white font-semibold bg-primary hover:bg-primary-hover"
+            >
+              Masuk
+            </Button>
+          )}
         </form>
       </Form>
 
@@ -141,6 +180,23 @@ export default function LoginForm() {
           Daftar
         </Link>
       </div>
+
+      {/* Success modal */}
+      <SuccessModal
+        open={emailVerified}
+        onClose={() => setEmailVerifies(false)}
+        modalText="Anda telah berhasil masuk ke akun anda. Mohon tunggu sebentar"
+        modalTitle="Login Berhasil"
+      />
+
+      {/* Error modal */}
+      <ErrorModal
+        open={error}
+        onClose={() => setError(false)}
+        modalText=" Silakan verifikasi email Anda untuk melanjutkan. Cek kotak masuk email Anda untuk tautan verifikasi."
+        modalTitle="Verifikasi Email Diperlukan"
+        buttonText="Tutup"
+      />
     </div>
   );
 }

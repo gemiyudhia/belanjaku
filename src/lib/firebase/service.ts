@@ -10,6 +10,7 @@ import {
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  signInWithEmailAndPassword,
 } from "firebase/auth";
 import { app, auth } from "./init";
 
@@ -66,8 +67,6 @@ export async function register(data: {
       email: data.email,
       role: data.role || "user",
       createdAt: new Date(),
-
-      userId,
     });
 
     return {
@@ -75,12 +74,63 @@ export async function register(data: {
       statusCode: 200,
       message: "Register success.",
     };
-
   } catch (error: unknown) {
     if (error instanceof Error) {
       return { status: false, statusCode: 400, mesaage: error.message };
     }
 
     return { status: false, statusCode: 400, message: "Register failed" };
+  }
+}
+
+export async function login(data: { email: string; password: string }) {
+  try {
+    // cari user berdasarkan email di firestore
+    const emailQuery = query(
+      collection(firestore, "users"),
+      where("email", "==", data.email)
+    );
+
+    const emailSnapshot = await getDocs(emailQuery);
+
+    // jika user tidak ditemukan
+    if (emailSnapshot.empty) {
+      return {
+        status: false,
+        statusCode: 404,
+        message: "User not found in database",
+      };
+    }
+
+    const userDoc = emailSnapshot.docs[0];
+    const userData = userDoc.data();
+
+    // authentikasi menggunakan firebase authentication
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      userData.email,
+      data.password
+    );
+
+    const user = userCredential.user;
+
+    // periksa apakah email sudah diverifikasi
+    if (!user.emailVerified) {
+      return { status: false, statusCode: 400, message: "Email not verified" };
+    }
+
+    // kembalikan data pengguna
+    return {
+      status: true,
+      statusCode: 200,
+      user: {
+        email: user.email,
+        role: userData.role,
+        createdAt: userData.createdAt,
+      },
+    };
+  } catch (error) {
+    console.error("login error: ", error);
+    return { status: false, statusCode: 500, message: "invalid credential" };
   }
 }
