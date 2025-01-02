@@ -88,7 +88,12 @@ export default function LoginForm() {
       </div>
 
       <div>
-        <Button variant="outline" className="w-full p-4">
+        <Button
+          type="submit"
+          variant="outline"
+          onClick={() => signIn("google", { redirect: false, callbackUrl: "/" })}
+          className="w-full p-4"
+        >
           <FcGoogle />
           Masuk dengan Google
         </Button>

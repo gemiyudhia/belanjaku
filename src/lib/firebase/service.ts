@@ -5,6 +5,7 @@ import {
   getFirestore,
   query,
   setDoc,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import {
@@ -13,6 +14,7 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { app, auth } from "./init";
+import { UserData } from "@/types/UserData";
 
 const firestore = getFirestore(app);
 
@@ -132,5 +134,45 @@ export async function login(data: { email: string; password: string }) {
   } catch (error) {
     console.error("login error: ", error);
     return { status: false, statusCode: 500, message: "invalid credential" };
+  }
+}
+
+export async function loginWithGoogle(
+  data: UserData,
+  callback: (result: { status: boolean; data: UserData }) => void
+) {
+  const googleQuery = query(
+    collection(firestore, "users"),
+    where("email", "==", data.email)
+  );
+
+  const snapshot = await getDocs(googleQuery);
+  const user = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...(doc.data() as UserData),
+  }));
+
+  if (user.length > 0) {
+    // Jika pengguna ditemukan, perbarui datanya
+    const updatedData = {
+      ...data,
+      updatedAt: new Date(), // Tambahkan waktu pembaruan
+    };
+    await updateDoc(doc(firestore, "users", user[0].id!), updatedData).then(
+      () => {
+        callback({ status: true, data: updatedData });
+      }
+    );
+  } else {
+    // Jika pengguna tidak ditemukan, tambahkan pengguna baru
+    const newUserData = {
+      ...data,
+      createdAt: new Date(), // Tambahkan waktu pembuatan
+      isActive: true, // Status aktif default
+    };
+    const newUserRef = doc(collection(firestore, "users"));
+    await setDoc(newUserRef, newUserData).then(() => {
+      callback({ status: true, data: newUserData });
+    });
   }
 }

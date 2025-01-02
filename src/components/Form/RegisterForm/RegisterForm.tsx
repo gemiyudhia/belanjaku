@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import SuccessModal from "@/components/Modal/SuccessModal/SuccessModal";
 import ErrorModal from "@/components/Modal/ErrorModal/ErrorModal";
+import { signIn } from "next-auth/react";
 
 const formSchema = z
   .object({
@@ -80,6 +81,26 @@ export default function RegisterForm() {
       }),
     });
 
+    try {
+      const res = await signIn("credentials", {
+        redirect: false,
+        email: values.email,
+        password: values.password,
+      });
+      if (res?.ok) {
+        form.reset();
+        setLoading(false);
+        setTimeout(() => {
+          push("/");
+        }, 4000);
+      } else {
+        setLoading(false);
+        setError(true);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+
     if (res.ok) {
       form.reset();
       setLoading(false);
@@ -93,6 +114,10 @@ export default function RegisterForm() {
     }
   }
 
+  const handleGoogleLogin = async () => {
+    await signIn("google", { redirect: false, callbackUrl: "/" });
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
@@ -104,7 +129,12 @@ export default function RegisterForm() {
       </div>
 
       <div>
-        <Button variant="outline" className="w-full p-4">
+        <Button
+          type="submit"
+          variant="outline"
+          onClick={handleGoogleLogin}
+          className="w-full p-4"
+        >
           <FcGoogle />
           Masuk dengan Google
         </Button>
